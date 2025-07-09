@@ -16,22 +16,37 @@ export default function UserRepos({ manage = false, confirmDelete, repos }) {
   const [reposList, setReposList] = useState(repos || []);
   const [reorder, setReorder] = useState(false);
   const [reposListPrevious, setReposListPrevious] = useState(repos || []);
+  const [isSaving, setIsSaving] = useState(false);
   const saveOrder = async () => {
-    const BASE_URL = clientEnv.NEXT_PUBLIC_BASE_URL;
-    const res = await fetch(`${BASE_URL}/api/account/manage/repos`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(reposList),
-    });
-    const updatedRepos = await res.json();
-    setReposList(updatedRepos);
-    setReposListPrevious(updatedRepos);
-    setReorder(false);
+    setIsSaving(true);
+    try {
+      const BASE_URL = clientEnv.NEXT_PUBLIC_BASE_URL;
+      const res = await fetch(`${BASE_URL}/api/account/manage/repos`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reposList),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const updatedRepos = await res.json();
+      setReposList(updatedRepos);
+      setReposListPrevious(updatedRepos);
+      setReorder(false);
+    } catch (error) {
+      console.error('Error saving repo order:', error);
+      // Optionally show error notification here
+    } finally {
+      setIsSaving(false);
+    }
   };
   useEffect(() => {
     setReposList(repos);
+    setReposListPrevious(repos);
   }, [repos]);
 
   const item = (repo) => (
@@ -129,8 +144,8 @@ export default function UserRepos({ manage = false, confirmDelete, repos }) {
           </Button>
         )}
         {reorder && (
-          <Button primary={true} onClick={() => saveOrder()}>
-            SAVE
+          <Button primary={true} onClick={() => saveOrder()} disabled={isSaving}>
+            {isSaving ? 'SAVING...' : 'SAVE'}
           </Button>
         )}
       </div>
